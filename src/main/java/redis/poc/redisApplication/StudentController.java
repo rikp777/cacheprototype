@@ -1,36 +1,44 @@
 package redis.poc.redisApplication;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import io.lettuce.core.dynamic.annotation.Param;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 public class StudentController {
 
-    private final StudentRepo repo;
-
-    public StudentController(StudentRepo repo) {
-        this.repo = repo;
-    }
+    @Autowired
+    private RedisTemplate<String, Student> redisTemplate;
 
 
-    @GetMapping("/create")
-    public Student create(@RequestBody Student student) {
-        return repo.save(student);
+    @PostMapping("/create")
+    public String create(@RequestParam long id, @RequestParam String name, @RequestParam int age) {
+        Student student = new Student(id, name, age);
+
+        var key = "student_" + id;
+        final ValueOperations<String, Student> operations = redisTemplate.opsForValue();
+        operations.set(key, student, 10, TimeUnit.SECONDS);
+
+        return "saved";
     }
 
     @GetMapping("/get/{id}")
-    public Optional<Student> getStudent(@PathVariable Long id) {
-        return repo.findById(id);
+    public String getStudent(@PathVariable Long id) {
+        var key = "student_" + id;
+        final ValueOperations<String, Student> operations = redisTemplate.opsForValue();
+        Student student1 = operations.get(key);
+
+        return student1.getName();
     }
 
     @GetMapping("/get")
-    public List<Student> getStudents() {
-        return repo.findAll();
+    public String getStudents() {
+
+        return "saved";
     }
 
 }
